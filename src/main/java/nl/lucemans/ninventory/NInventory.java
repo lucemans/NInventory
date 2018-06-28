@@ -11,6 +11,7 @@ import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.*;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
@@ -21,8 +22,12 @@ import java.util.ListIterator;
  */
 public class NInventory implements Listener {
 
+    private static ArrayList<NInventory> ninvs = new ArrayList<NInventory>();
+
     private JavaPlugin plugin;
     private Inventory inv;
+    private int runnable;
+    public Runnable updateTick;
     public HashMap<Integer, Boolean> locked = new HashMap<Integer, Boolean>();
     public HashMap<Integer, Runnable> lclick = new HashMap<Integer, Runnable>();
     public HashMap<Integer, Runnable> rclick = new HashMap<Integer, Runnable>();
@@ -32,13 +37,37 @@ public class NInventory implements Listener {
     public HashMap<Integer, Runnable> mclick = new HashMap<Integer, Runnable>();
 
     public NInventory(String name, int size, JavaPlugin plugin) {
-        Bukkit.getLogger().info("Created on an inventory 2.0");
+        //Bukkit.getLogger().info("Created on an inventory 2.0");
         this.plugin = plugin;
         this.inv = Bukkit.createInventory(null, size, name);
         for (int i = 0; i < size; i++) {
             locked.put(i, true);
         }
+        ninvs.add(this);
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        runnable = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, new Runnable() {
+            public void run() {
+                if (updateTick != null)
+                    updateTick.run();
+            }
+        }, 1,1);
+    }
+
+    public void destroy() {
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (p != null)
+                if (p.getOpenInventory() != null)
+                    if (p.getOpenInventory().getTopInventory() != null)
+                        if (compare(p.getOpenInventory().getTopInventory()))
+                            p.closeInventory();
+        }
+        Bukkit.getScheduler().cancelTask(runnable);
+        ninvs.remove(this);
+    }
+
+    public static void destroyAll() {
+        for (NInventory ninv : (ArrayList<NInventory>) ninvs.clone())
+            ninv.destroy();
     }
 
     public Inventory getInv() {
@@ -83,6 +112,10 @@ public class NInventory implements Listener {
     }
     public NInventory setDropClick(Integer i, Runnable run) {
         dclick.put(i, run);
+        return this;
+    }
+    public NInventory setUpdate(Runnable run) {
+        this.updateTick = run;
         return this;
     }
     public static void close(Player p) {
@@ -134,7 +167,7 @@ public class NInventory implements Listener {
         }
         else
         {
-            if (event.isShiftClick())
+            /*if (event.isShiftClick())
             {
                 if (compare(event.getInventory()))
                 {
@@ -149,7 +182,7 @@ public class NInventory implements Listener {
             if (event.getAction() == InventoryAction.CLONE_STACK) {
                 Bukkit.getLogger().info("CLONE");
                 event.setCancelled(true);
-            }
+            }*/
         }
     }
     /*@EventHandler
@@ -170,22 +203,24 @@ public class NInventory implements Listener {
     public void onInventory(InventoryMoveItemEvent event) {
         if (compare(event.getDestination()))
         {
-            Bukkit.getLogger().info("DESTINATION");
+            //Bukkit.getLogger().info("DESTINATION");
             event.setCancelled(true);
         }
         if (compare(event.getSource()))
         {
-            Bukkit.getLogger().info("SOURCE");
+            //Bukkit.getLogger().info("SOURCE");
             event.setCancelled(true);
         }
         if (compare(event.getInitiator()))
         {
-            Bukkit.getLogger().info("INITIATOR");
+            //Bukkit.getLogger().info("INITIATOR");
             event.setCancelled(true);
         }
     }
 
     public boolean compare(Inventory inv1) {
+        if (inv1 == null)
+            return false;
         if (!inv1.getName().equalsIgnoreCase(inv.getName()))
             return false;
         for (HumanEntity e : inv1.getViewers()) {
