@@ -9,6 +9,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -134,7 +135,7 @@ public class NInventory implements Listener {
     }
 
     public void close() {
-        List<HumanEntity> r = new ArrayList<>(inv.getViewers());
+        List<HumanEntity> r = new ArrayList<HumanEntity>(inv.getViewers());
         for (HumanEntity p : r) {
             p.closeInventory();
         }
@@ -196,14 +197,18 @@ public class NInventory implements Listener {
 
     @EventHandler
     public void onInventory(InventoryMoveItemEvent event) {
-        if (compare(event.getDestination())) {
-            event.setCancelled(true);
-        }
-        if (compare(event.getSource())) {
-            event.setCancelled(true);
-        }
-        if (compare(event.getInitiator())) {
-            event.setCancelled(true);
+        if (event.getDestination().getType() == InventoryType.CHEST || event.getInitiator().getType() == InventoryType.CHEST || event.getSource().getType() == InventoryType.CHEST) {
+            if (event.getDestination().getType() == InventoryType.PLAYER || event.getInitiator().getType() == InventoryType.PLAYER || event.getSource().getType() == InventoryType.PLAYER) {
+                if (compare(event.getDestination())) {
+                    event.setCancelled(true);
+                }
+                if (compare(event.getSource())) {
+                    event.setCancelled(true);
+                }
+                if (compare(event.getInitiator())) {
+                    event.setCancelled(true);
+                }
+            }
         }
     }
 
@@ -236,6 +241,8 @@ public class NInventory implements Listener {
             if (!inv.getViewers().contains(e))
                 return false;
         }
+        if (!(inv1.getHolder() instanceof NInventoryHolder))
+            return false;
         return ((NInventoryHolder) inv1.getHolder()).id.equals(this.id);
     }
 }
